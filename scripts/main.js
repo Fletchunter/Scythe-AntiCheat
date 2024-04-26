@@ -303,12 +303,10 @@ system.runInterval(() => {
 					const enchantments = [];
 
 					for(const enchantData of itemEnchants) {
-						// @ts-expect-error
 						const enchantTypeId = enchantData.type.id;
 
 						// BadEnchants/A = checks for items with invalid enchantment levels
 						if(config.modules.badenchantsA.enabled) {
-							// @ts-expect-error
 							const maxLevel = config.modules.badenchantsA.levelExclusions[enchantData.type] ?? enchantData.type.maxLevel;
 
 							if(enchantData.level > maxLevel) {
@@ -344,7 +342,7 @@ system.runInterval(() => {
 				}
 			}
 
-			const playerSpeed = Number(Math.sqrt(Math.abs(player.velocity.x ** 2 + player.velocity.z ** 2)).toFixed(2));
+			const playerSpeed = Number(Math.sqrt(Math.abs(player.velocity.x**2 + player.velocity.z**2)).toFixed(2));
 
 			// NoSlow/A = Speed limit check
 			if(config.modules.noslowA.enabled && playerSpeed >= config.modules.noslowA.speed && playerSpeed <= config.modules.noslowA.maxSpeed && player.isOnGround && !player.isJumping && !player.isGliding && !player.getEffect("speed") && player.hasTag('right') && !player.hasTag("trident") && !player.hasTag("riding")) {
@@ -452,16 +450,14 @@ world.afterEvents.playerPlaceBlock.subscribe(({ block, player }) => {
 		const container = block.getComponent("inventory")?.container;
 		if(!container) return; // This should not happen
 
-		let startNumber = 0;
-		const emptySlots = container.emptySlotsCount;
-		if(container.size > 27) startNumber = container.size / 2;
+		const startNumber = container.size > 27 ? container.size / 2 : 0;
 
 		for(let i = startNumber; i < container.size; i++) {
 			const item = container.getItem(i);
 			if(!item) continue;
 
 			container.clearAll();
-			flag(player, "IllegalItems", "I", "Exploit", `containerBlock=${block.typeId},totalSlots=${container.size},emptySlots=${emptySlots}`, false, undefined, player.selectedSlot);
+			flag(player, "IllegalItems", "I", "Exploit", `containerBlock=${block.typeId},totalSlots=${container.size},emptySlots=${container.emptySlotsCounts}`, false, undefined, player.selectedSlot);
 			break;
 		}
 	}
@@ -779,7 +775,7 @@ world.afterEvents.playerSpawn.subscribe(({ initialSpawn, player }) => {
 		flag(player, "Namespoof", "B", "Exploit");
 	}
 
-	// check if the player is in the global ban list
+	// Check if the player is in the global ban list
 	if(banList.includes(player.name.toLowerCase())) {
 		player.setDynamicProperty("banInfo", JSON.stringify({
 			by: "Scythe Anticheat",
@@ -852,7 +848,7 @@ world.afterEvents.entitySpawn.subscribe(({ entity }) => {
 			const container = entity.getComponent("inventory")?.container;
 
 			if(container && container.size !== container.emptySlotsCount) {
-				for (let i = 0; i < container.size; i++) {
+				for(let i = 0; i < container.size; i++) {
 					container.setItem(i, undefined);
 				}
 
