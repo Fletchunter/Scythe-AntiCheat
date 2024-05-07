@@ -1,7 +1,7 @@
 // @ts-check
 import banList from "./data/globalban.js";
 import config from "./data/config.js";
-import { world, system, ItemTypes, ItemStack, BlockPermutation } from "@minecraft/server";
+import { world, system, ItemTypes, ItemStack } from "@minecraft/server";
 import { flag, banMessage, getClosestPlayer, getScore, getBlocksBetween, tellAllStaff } from "./util.js";
 import { mainGui, playerSettingsMenuSelected } from "./features/ui.js";
 import { commandHandler } from "./commands/handler.js";
@@ -10,14 +10,6 @@ let entitiesSpawnedInLastTick = 0;
 
 world.beforeEvents.chatSend.subscribe((msg) => {
 	const { sender: player, message } = msg;
-	const lowerCaseMsg = message.toLowerCase();
-
-	if(lowerCaseMsg.includes("the best minecraft bedrock utility mod") || lowerCaseMsg.includes("disepi/ambrosial")) msg.cancel = true;
-
-	if(player.hasTag("isMuted")) {
-		player.sendMessage("§r§6[§aScythe§6]§r §a§lNOPE! §r§aYou have been muted.");
-		msg.cancel = true;
-	}
 
 	const redeemCodes = {
         "kitpvp": "KitPvP",
@@ -48,10 +40,10 @@ world.beforeEvents.chatSend.subscribe((msg) => {
     
     if (bannedWords.some(word => message.toUpperCase().includes(word.toUpperCase()))) {
         msg.cancel = true; 
-    }
+
 	if(player.hasTag("isMuted")) {
-		msg.cancel = true;
 		player.sendMessage("§r§6[§aScythe§6]§r §a§lNOPE! §r§aYou have been muted.");
+		msg.cancel = true;
 	}
 
 	commandHandler(msg);
@@ -74,9 +66,7 @@ world.beforeEvents.chatSend.subscribe((msg) => {
 	}
 });
 
-world.afterEvents.chatSend.subscribe((msg) => {
-	const player = msg.sender;
-
+world.afterEvents.chatSend.subscribe(({ sender: player }) => {
 	/*
 	// BadPackets[2] = checks for invalid chat message length
 	if(config.modules.badpackets2.enabled && message.length > config.modules.badpackets2.maxlength || message.length < config.modules.badpackets2.minLength) flag(player, "BadPackets", "2", "Exploit", `messageLength=${message.length}`, undefined, msg);
@@ -200,8 +190,8 @@ system.runInterval(() => {
                     player.nameTag = `${borderColor}[§r${mainColor}${tag}${borderColor}]§r ${updatePlayerNameColor}${player.name}`
                 }
     
-    player.removeTag("updateTag");
-    console.warn(`Tag updated.`);
+                player.removeTag("updateTag");
+                console.warn(`Tag updated.`);
 	        }
 
 			if(config.modules.nukerA.enabled && player.blocksBroken >= 1) player.blocksBroken = 0;
@@ -210,7 +200,7 @@ system.runInterval(() => {
 				player.flagAutotoolA = true;
 				player.autotoolSwitchDelay = now - player.startBreakTime;
 			}
-			
+
 			/*
 			// Crasher/A = invalid pos check
 			if(config.modules.crasherA.enabled && Math.abs(player.location.x) > 30000000 ||
@@ -457,7 +447,7 @@ world.afterEvents.playerPlaceBlock.subscribe(({ block, player }) => {
 			if(!item) continue;
 
 			container.clearAll();
-			flag(player, "IllegalItems", "I", "Exploit", `containerBlock=${block.typeId},totalSlots=${container.size},emptySlots=${container.emptySlotsCounts}`, false, undefined, player.selectedSlot);
+			flag(player, "IllegalItems", "I", "Exploit", `containerBlock=${block.typeId},totalSlots=${container.size},emptySlots=${container.emptySlotsCount}`, false, undefined, player.selectedSlot);
 			break;
 		}
 	}
@@ -609,14 +599,14 @@ world.afterEvents.playerBreakBlock.subscribe(({ player, dimension, block, broken
 		revertBlock = true;
 	}
 
-	if(config.modules.xrayA.enabled && config.itemLists.xray_items.includes(brokenBlockId) && !player.hasTag("op")) {
-		flag(player, "Xray", "A", "Misc", `block=${brokenBlockId}`);
+	if(config.misc_modules.oreAlerts.enabled && config.misc_modules.oreAlerts.blocks.includes(brokenBlockId) && !player.hasTag("op")) {
+		tellAllStaff(`§r§6[§aScythe§6]§r [Ore Alerts] ${player.name} has broken 1x ${brokenBlockId}`, ["notify"]);
 	}
 
 	if(revertBlock) {
-		// kill the items dropped items
+		// Remove the dropped items
 		const droppedItems = dimension.getEntities({
-			location: {x: block.location.x, y: block.location.y, z: block.location.z},
+			location: block.location,
 			minDistance: 0,
 			maxDistance: 2,
 			type: "item"
@@ -860,13 +850,13 @@ world.afterEvents.entitySpawn.subscribe(({ entity }) => {
 
 	if(config.misc_modules.antiArmorStandCluster.enabled && entity.typeId === "minecraft:armor_stand") {
 		const entities = entity.dimension.getEntities({
-			location: {x: entity.location.x, y: entity.location.y, z: entity.location.z},
+			location: entity.location,
 			maxDistance: config.misc_modules.antiArmorStandCluster.radius,
 			type: "armor_stand"
 		});
 
 		if(entities.length > config.misc_modules.antiArmorStandCluster.max_armor_stand_count) {
-			tellAllStaff(`§r§6[§aScythe§6]§r Potential lag machine detected at X: ${entity.location.x}, Y: ${entity.location.y}, Z: ${entity.location.z}. There are ${entities.length}/${config.misc_modules.antiArmorStandCluster.max_armor_stand_count} armor stands in this area.`, ["notify"]);
+			tellAllStaff(`§r§6[§aScythe§6]§r Potential lag machine detected at X: ${~entity.location.x}, Y: ${~entity.location.y}, Z: ${~entity.location.z}. There are ${entities.length}/${config.misc_modules.antiArmorStandCluster.max_armor_stand_count} armor stands in this area.`, ["notify"]);
 
 			for(const entityLoop of entities) {
 				entityLoop.remove();
@@ -1068,7 +1058,8 @@ world.afterEvents.worldInitialize.subscribe(() => {
 world.afterEvents.playerGameModeChange.subscribe(({fromGameMode, player, toGameMode}) => {
 	player.gamemode = toGameMode;
 
-	if(!config.misc_modules.antiGamemode.enabled ||
+	if(
+		!config.misc_modules.antiGamemode.enabled ||
 		// @ts-expect-error
 		!config.misc_modules.antiGamemode.blockedGamemodes.includes(toGameMode) ||
 		player.hasTag("op")
