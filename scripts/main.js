@@ -1111,5 +1111,5 @@ for(const player of world.getPlayers()) {
 	if(config.modules.killauraB.enabled) player.lastLeftClick = NaN;
 
 	player.gamemode = player.getGameMode();
-	player.lastGoodPosition = player.location;]
+	player.lastGoodPosition = player.location;
 }
