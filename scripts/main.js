@@ -1,7 +1,7 @@
 // @ts-check
 import banList from "./data/globalban.js";
 import config from "./data/config.js";
-import { world, system, ItemTypes, ItemStack } from "@minecraft/server";
+import { world, system, ItemTypes, ItemStack, BlockPermutation } from "@minecraft/server";
 import { flag, banMessage, getClosestPlayer, getScore, getBlocksBetween, tellAllStaff } from "./util.js";
 import { mainGui, playerSettingsMenuSelected } from "./features/ui.js";
 import { commandHandler } from "./commands/handler.js";
@@ -40,6 +40,7 @@ world.beforeEvents.chatSend.subscribe((msg) => {
     
     if (bannedWords.some(word => message.toUpperCase().includes(word.toUpperCase()))) {
         msg.cancel = true; 
+    }
 
 	if(player.hasTag("isMuted")) {
 		player.sendMessage("§r§6[§aScythe§6]§r §a§lNOPE! §r§aYou have been muted.");
@@ -1005,7 +1006,9 @@ world.beforeEvents.itemUseOn.subscribe(({ itemStack: item, source: player, block
     
         const itemId = item.typeId
         const blockId = block.typeId
+		// @ts-expect-error
         const blockWoodAxis = block.permutation.getState("pillar_axis"); // check woods state
+		const blockPermutation = BlockPermutation;
 
 		const axeList = [
 			"minecraft:wooden_axe",
@@ -1038,8 +1041,8 @@ world.beforeEvents.itemUseOn.subscribe(({ itemStack: item, source: player, block
 			{
 				player.runCommandAsync(`setblock ${block.location.x} ${block.location.y} ${block.location.z} ${blockId}`)
 	
-				// @ts-ignore
-				const setWoodAxis = (BlockPermutation.resolve(blockId, { "pillar_axis": blockWoodAxis }));
+				// @ts-expect-error
+				const setWoodAxis = (blockPermutation.resolve(blockId, { "pillar_axis": blockWoodAxis }));
 				system.run(() => {
 					block.setPermutation(setWoodAxis)
 				});
